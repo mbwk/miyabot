@@ -1,4 +1,4 @@
-#define _XOPEN_SOURCE 600
+#include "Python.h"
 
 #include "ircclient.h"
 
@@ -8,6 +8,9 @@
 #include <ctype.h> /* for tolower() */
 
 #include "netconn.h"
+
+#define PY_MPLX "multiplexer"
+#define PY_FUNC "msgcheck"
 
 char obuff[513];
 int sockdes;
@@ -44,6 +47,52 @@ IRC_write_privmsg_response(char *target, char *msg, char *user)
     IRC_write("PRIVMSG %s :%s: %s\r\n", target, user, msg);
 }
 
+int
+IRC_pass_to_script(char *target, char *user, char *msg)
+{
+    PyObject *pName, *pModule, *pFunc;
+    PyObject *pArgs, *pValue;
+
+    Py_Initialize();
+    pName = PyUnicode_FromString(PY_MPLX);
+    pModule = PyImport_Import(pName);
+
+    if (pModule != NULL) {
+        pFunc = PyObject_GetAttrString(pModule, PY_FUNC);
+
+        pArgs = PyTuple_New(3);
+
+        if (pFunc && PyCallable_Check(pFunc)) {
+            PyTuple_SetItem(pArgs, 0, PyUnicode_FromString(target));
+            PyTuple_SetItem(pArgs, 1, PyUnicode_FromString(user));
+            PyTuple_SetItem(pArgs, 2, PyUnicode_FromString(msg));
+        }
+
+        pValue = PyObject_CallObject(pFunc, pArgs);
+        Py_DECREF(pArgs);
+
+        if (pValue != NULL) {
+            printf("Result of call: %ld\n", PyLong_AsLong(pValue));
+            Py_DECREF(pValue);
+        } else {
+            Py_DECREF(pFunc);
+            Py_DECREF(pModule);
+            PyErr_Print();
+            fprintf(stderr, "Call failed\n");
+            return 1;
+        }
+        Py_XDECREF(pFunc);
+        Py_DECREF(pModule);
+    } else {
+        PyErr_Print();
+        fprintf(stderr, "Failed to load \"%s\"\n", PY_MPLX);
+        return 1;
+    }
+
+    Py_Finalize();
+    return 0;
+}
+
 void
 IRC_privmsg_interpret(char *user, char *command, char *target, char *message)
 {
@@ -74,6 +123,7 @@ IRC_privmsg_interpret(char *user, char *command, char *target, char *message)
                 word = message + i;
                 inword = 1;
                 haveword = 1;
+                break;
             } 
         }
 
@@ -85,17 +135,23 @@ IRC_privmsg_interpret(char *user, char *command, char *target, char *message)
 
             if (!strncmp(word, "ping", 4)) {
                 IRC_write_privmsg(target, "PONG");
+                return;
             } else if (!strncmp(word, "die", 3) && obey == 1) {
                 running = 0;
+                return;
             } else if (!strncmp(word, "privcheck", 9)) {
                 if (obey) {
                     IRC_write_privmsg_response(target, "you're privileged", user);
+                    return;
                 } else {
                     IRC_write_privmsg_response(target, "you have no privilege", user);
+                    return;
                 }
             }
         }
     }
+
+    IRC_pass_to_script(target, user, message);
 }
 
 void
