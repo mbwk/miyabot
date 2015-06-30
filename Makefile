@@ -6,10 +6,10 @@ CXX					= clang++
 CFLAGS					= -fdiagnostics-show-location=every-line \
 					-std=c11 -Wall -Werror -pedantic \
 					-Wfatal-errors -g -iquote include/ \
-					$(shell python-config --cflags)
+					$(shell python3-config --cflags)
 
 LD					= $(CC)
-LDFLAGS				= $(shell python-config --ldflags)
+LDFLAGS				= $(shell python3-config --ldflags)
 STRIP				= strip --strip-unneeded
 RM					= rm
 CTAGS				= ctags -R
