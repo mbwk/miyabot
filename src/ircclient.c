@@ -52,9 +52,11 @@ static int numargs = 0;
 static PyObject*
 emb_msg_send(PyObject *self, PyObject *args)
 {
-    if (!PyArg_ParseTuple(args, ":numargs")) {
+    char *target, *msg;
+    if (!PyArg_ParseTuple(args, "ss", &target, &msg)) {
         return NULL;
     }
+    IRC_write_privmsg(target, msg);
     return PyLong_FromLong(numargs);
 }
 
@@ -140,27 +142,35 @@ IRC_privmsg_interpret(char *user, char *command, char *target, char *message)
     /* prompt */
     if (message[0] == '>' && message[1] == '>') {
         int i, inword = 0, haveword = 0;
-        char *word;
+        int lettercount = 0, wordstart = 0;
 
         for (i = 2; i < msglen; ++i) {
             if (message[i] == ' ') {
                 if (inword) {
-                    message[i] = '\0';
                     inword = 0;
+                    break;
                 }
                 continue;
             } else if (!inword) {
-                word = message + i;
+                wordstart = i;
                 inword = 1;
                 haveword = 1;
-                break;
             } 
+
+            if (inword) {
+                ++lettercount;
+            }
         }
+
+        char word[lettercount + 1];
+        strncpy(word, message + wordstart, lettercount);
+        word[lettercount] = '\0';
+
 
         if (haveword) {
             int wordlen = strlen(word);
             for (i = 0; i < wordlen; ++i) {
-                tolower(word[i]);
+                word[i] = tolower(word[i]);
             }
 
             if (!strncmp(word, "ping", 4)) {
