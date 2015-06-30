@@ -9,7 +9,7 @@
 
 #include "netconn.h"
 
-#define PY_MPLX "multiplexer"
+#define PY_NAME "scripts"
 #define PY_FUNC "msgcheck"
 
 char obuff[513];
@@ -47,14 +47,44 @@ IRC_write_privmsg_response(char *target, char *msg, char *user)
     IRC_write("PRIVMSG %s :%s: %s\r\n", target, user, msg);
 }
 
+static int numargs = 0;
+
+static PyObject*
+emb_msg_send(PyObject *self, PyObject *args)
+{
+    if (!PyArg_ParseTuple(args, ":numargs")) {
+        return NULL;
+    }
+    return PyLong_FromLong(numargs);
+}
+
+static PyMethodDef EmbMethods[] = {
+    {"msg_send", emb_msg_send, METH_VARARGS, "Sends a message"},
+    {NULL, NULL, 0, NULL}
+};
+
+static PyModuleDef EmbModule = {
+    PyModuleDef_HEAD_INIT, "emb", NULL, -1, EmbMethods,
+    NULL, NULL, NULL, NULL
+};
+
+static PyObject*
+PyInit_emb(void)
+{
+    return PyModule_Create(&EmbModule);
+}
+
 int
 IRC_pass_to_script(char *target, char *user, char *msg)
 {
+    setenv("PYTHONPATH", ".", 1);
+
     PyObject *pName, *pModule, *pFunc;
     PyObject *pArgs, *pValue;
 
+    PyImport_AppendInittab("emb", &PyInit_emb);
     Py_Initialize();
-    pName = PyUnicode_FromString(PY_MPLX);
+    pName = PyUnicode_FromString(PY_NAME);
     pModule = PyImport_Import(pName);
 
     if (pModule != NULL) {
@@ -85,7 +115,7 @@ IRC_pass_to_script(char *target, char *user, char *msg)
         Py_DECREF(pModule);
     } else {
         PyErr_Print();
-        fprintf(stderr, "Failed to load \"%s\"\n", PY_MPLX);
+        fprintf(stderr, "Failed to load \"%s\"\n", PY_NAME);
         return 1;
     }
 
