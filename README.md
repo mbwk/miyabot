@@ -1,8 +1,11 @@
 # miyabot
 
-A revival of my old miyabot project.  This time in C89.
+A revival of my old miyabot project.  This time in C11.
 
 A simple, self-contained IRC bot that should run on any POSIX-compliant system.
+
+Now extensible via scripting with Python!  Written for Python3, but can be made to work with
+Python2 with a few edits.
 
 
 ## Restrictions
