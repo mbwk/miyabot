@@ -17,7 +17,7 @@ int sockdes;
 int running = 0;
 
 char *chan;
-char *mstr;
+char **masters;
 
 enum MSG_type {
     T_PING,
@@ -135,8 +135,12 @@ IRC_privmsg_interpret(char *user, char *command, char *target, char *message)
         return;
     }
 
-    if (!strcmp(user, mstr)) {
-        obey = 1;
+    for (int i = 0; masters[i] != NULL; ++i) {
+        char *mstr = masters[i];
+        if (!strcmp(user, mstr)) {
+            obey = 1;
+            break;
+        }
     }
 
     /* prompt */
@@ -176,17 +180,20 @@ IRC_privmsg_interpret(char *user, char *command, char *target, char *message)
             if (!strncmp(word, "ping", 4)) {
                 IRC_write_privmsg(target, "PONG");
                 return;
-            } else if (!strncmp(word, "die", 3) && obey == 1) {
-                running = 0;
+            } else if (!strncmp(word, "die", 3)) {
+                if (obey) {
+                    running = 0;
+                } else {
+                    IRC_write_privmsg_response(target, "nice try, meatbag", user);
+                }
                 return;
             } else if (!strncmp(word, "privcheck", 9)) {
                 if (obey) {
                     IRC_write_privmsg_response(target, "you're privileged", user);
-                    return;
                 } else {
                     IRC_write_privmsg_response(target, "you have no privilege", user);
-                    return;
                 }
+                return;
             }
         }
     }
@@ -221,7 +228,7 @@ IRC_interpret(char *user, char *command, char *where, char *message)
 void
 IRC_parse(char *msg)
 {
-    int i, l = strlen(msg), start;
+    int i, l = strlen(msg), start = 0;
     int wordcount = 0;
     char *user, *command, *where, *message;
     user = command = where = message = NULL;
@@ -295,17 +302,28 @@ IRC_separate(char *ibuff, int len)
 }
 
 void
-IRC_run(char *nick, char *addr, char *port, char *channel, char *master)
+IRC_connect(char *addr, char *port, char *nick)
+{
+    sockdes = NET_establish(addr, port);
+    IRC_write("USER %s 0 0 :%s\r\n", nick, nick);
+    IRC_write("NICK %s\r\n", nick);
+}
+
+void
+IRC_run(char *nick, char *addr, char *port, char *channel, char **masters_arr)
 {
     int msglen;
     char *ibuff;
 
     chan = channel;
-    mstr = master;
+    masters = masters_arr;
 
+    IRC_connect(addr, port, nick);
+    /*
     sockdes = NET_establish(addr, port);
     IRC_write("USER %s 0 0 :%s\r\n", nick, nick);
     IRC_write("NICK %s\r\n", nick);
+    */
 
     running = 1;
     while (running) {

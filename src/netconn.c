@@ -22,9 +22,12 @@ NET_establish(char *addr, char *port)
     hints.ai_socktype = SOCK_STREAM;
     getaddrinfo(addr, port, &hints, &res);
 
-
     sockdes = socket(res->ai_family, res->ai_socktype, 0);
     errno = connect(sockdes, res->ai_addr, res->ai_addrlen);
+
+    if (errno != 0) {
+        printf("%d\n", errno);
+    }
 
     return sockdes;
 }
