@@ -1,2 +1,2 @@
 from .scripts import msgcheck
-from .miyabotmodules.common import BaseModule
+from .common import BaseModule
