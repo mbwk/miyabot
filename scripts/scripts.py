@@ -10,21 +10,21 @@ import emb
 
 class Robot:
 
-    def __init__(self, target):
+    def __init__(self, target, usr):
         self.target = target
+        self.usr = usr
 
-    def send_response(self, msg):
+    def msg(self, msg):
         emb.msg_send(self.target, msg)
 
-def send_response(target, msg):
-    emb.msg_send(target, msg)
+    def res(self, msg):
+        emb.msg_send(self.target, "{}: {}".format(self.usr, msg))
 
 def msgcheck(target, usr, msg):
 
-    bot = Robot(target)
+    bot = Robot(target, usr)
 
     # put dir of scripts
-    # dir = "/home/miyabe/Programming/CeeSepples/miyabot/scripts/miyabot-modules" #os.path.dirname(os.path.abspath(__file__))
     dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "miyabot-modules")
 
     # files
@@ -46,6 +46,9 @@ def msgcheck(target, usr, msg):
             except:
                 raise
             module = loader.load_module()
-            module.execute(bot.send_response, msg)
+            if msg.startswith(">>") or msg.startswith("#") or msg.startswith("miyabot"):
+                module.prompt(bot, msg)
+            else:
+                module.hear(bot, msg)
 
 

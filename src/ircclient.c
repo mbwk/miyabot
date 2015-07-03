@@ -262,6 +262,8 @@ IRC_parse(char *msg)
 
     if (!strncmp(command, "001", 3) && chan != NULL) {
         IRC_write("JOIN %s\r\n", chan);
+    } else if (!strncmp(command, "INVITE", 6)) {
+        IRC_write("JOIN %s\r\n", message);
     } else if (!strncmp(command, "PRIVMSG", 7) || !strncmp(command, "NOTICE", 6)) {
         IRC_interpret(user, command, where, message);
     }
