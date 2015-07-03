@@ -24,7 +24,8 @@ def msgcheck(target, usr, msg):
     bot = Robot(target)
 
     # put dir of scripts
-    dir = "/home/miyabe/Programming/CeeSepples/miyabot/scripts/miyabot-modules" #os.path.dirname(os.path.abspath(__file__))
+    # dir = "/home/miyabe/Programming/CeeSepples/miyabot/scripts/miyabot-modules" #os.path.dirname(os.path.abspath(__file__))
+    dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "miyabot-modules")
 
     # files
     files = os.listdir(dir)
